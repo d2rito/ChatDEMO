@@ -1,0 +1,122 @@
+﻿@page "/chatRoom"
+
+@using BlazorApp1.Client.Service;
+@using Microsoft.AspNetCore.Components.Authorization;
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Authorization
+@using System.Text.RegularExpressions;
+@using BlazorApp1.Shared
+
+@inject IBotService BotService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@implements IAsyncDisposable
+@attribute [Authorize]
+
+<PageTitle>SignalR Chat</PageTitle>
+<h4>SignalR Chat</h4>
+
+<textarea style="width:100%; height:500px" @ref="TextAreaReference" readonly>
+    @messages
+    </textarea>
+<div class="input-group">
+    <input @bind-value="message"
+           @bind-value:event="oninput"
+           @onkeyup="HandleInput" class="form-control" />
+    <button class="btn btn-primary" @onclick="Send">Send Message</button>
+</div>
+
+@code {
+    //Hub Connection
+    private HubConnection? hubConnection;
+    //A donde se envian los mensajes
+    private string messages = string.Empty;
+    string commandPattern = @"^\/";
+    //regex pattern
+    string pattern = @"^/stock=.+$";
+    //user del client
+    private string userName;
+    //Holder del mensaje del usuario
+    private string message = string.Empty;
+    //Element reference
+    ElementReference TextAreaReference;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var usuario = authState.User;
+        userName = usuario.Identity.Name.Split("@")[0];
+        hubConnection = new HubConnectionBuilder()
+        .WithUrl(NavigationManager.ToAbsoluteUri($"/chathub?username={userName}"))
+        .Build();
+
+        //en cualquier momento que alguien manda un mensaje el evento RecievedMessage se ejecuta
+        hubConnection.On<string, string>("RecievedMessage", (userName, message) =>
+        {
+            var msg = $"[{DateTime.Now.ToString("hh:mm")}] {(string.IsNullOrEmpty(userName) ? "" : userName + ": ")}{message}";
+            messages += msg + "\n";
+
+            //re render para blazor
+            StateHasChanged();
+        });
+        hubConnection.On<string,string>("CommandInput", (userName, message) =>
+        {
+            var msg = $"{message}";
+            messages += msg + "\n";
+            StateHasChanged();
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    private async Task Send()
+    {
+        if (hubConnection != null)
+        {
+            if (Regex.IsMatch(message, commandPattern))
+            {
+                if (Regex.IsMatch(message, pattern))
+                {
+                    //extraer el codigo
+                    var stock_code = message.Split('=')[1];
+                    StockObject csvValues = await BotService.ProcessStockRequestAsync(stock_code);
+                    if(csvValues != null)
+                    {
+                        await hubConnection.SendAsync("AddMessageToChat", "StockBot", $"{csvValues.Symbol} quote is ${csvValues.Close} per share");
+                        message = string.Empty;
+                    }
+                    else
+                    {
+                        await hubConnection.SendAsync("AddMessageToChat", "StockBot", "InvalidStock");
+                        message = string.Empty;
+                    }
+                }
+                else
+                {
+                   await hubConnection.SendAsync("AddMessageToChat", userName, message);
+                }
+            }
+            else
+            {
+                await hubConnection.SendAsync("AddMessageToChat", userName, message);
+                message = string.Empty;
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection != null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+
+    public async Task HandleInput(KeyboardEventArgs args)
+    {
+        if (args.Key.Equals("Enter"))
+        {
+            await Send();
+        }
+    }
+}

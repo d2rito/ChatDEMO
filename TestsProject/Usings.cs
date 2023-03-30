@@ -1,0 +1,15 @@
+global using Microsoft.VisualStudio.TestTools.UnitTesting;
+global using BlazorApp1.Server.Controllers;
+global using BlazorApp1.Shared;
+global using Microsoft.AspNetCore.Identity;
+global using Microsoft.AspNetCore.Mvc;
+global using Moq;
+global using System.Collections.Generic;
+global using System.Net;
+global using System.Net.Http;
+global using System.Threading;
+global using System.Threading.Tasks;
+global using Microsoft.AspNetCore.Http;
+global using Microsoft.Extensions.Configuration;
+global using BlazorApp1.Server.Hubs;
+global using Microsoft.AspNetCore.SignalR;
