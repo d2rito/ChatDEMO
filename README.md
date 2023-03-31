@@ -14,3 +14,14 @@ Hi to try this application you have to follow the next steps:
 <li>10. You Can follow the StockBot instructions too </li>
 <li>11. Finally you can try Logging out too.</li>
 </ul>
+To try the installer follow these steps:
+<ul>
+<li>1. Go to the Extensions tab</li>
+<li>2. Click on Manage extensions</li>
+<li>3. In the search bar type: Microsoft Visual Studio Installer Projects 2022</li>
+<li>4. Install it</li>
+<li>5. After you installed it, right click on the SetupInstaller project and build it</li>
+<li>6. In the output tab you'll see the path where the installer was created copy that</li>
+<li>7. Go to the File Explorer and paste the path into the path tab</li>
+<li>8. The installer should open and follow the instructions</li>
+</ul>
